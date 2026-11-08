@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AfriWear Studio – Custom African Wear Prototype</title>
+<style>*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font-family:inherit}</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const SCREENS = ["landing", "auth", "studio", "measurements", "tailors", "order", "payment", "dashboard"];
+
+const colors = {
+  orange: "#E85D04",
+  brown: "#6B3A2A",
+  gold: "#F4A522",
+  cream: "#FDF6EC",
+  dark: "#1A1A1A",
+  muted: "#8B6F5E",
+  light: "#FFF8F0",
+  success: "#2D6A4F",
+  border: "#E8D5C0",
+};
+
+const fabrics = [
+  { name: "Ankara", color: "#E85D04", pattern: "🟠" },
+  { name: "Kente", color: "#F4A522", pattern: "🟡" },
+  { name: "Aso-oke", color: "#6B3A2A", pattern: "🟤" },
+  { name: "Adire", color: "#1B4332", pattern: "🟢" },
+  { name: "Dashiki", color: "#7B2D8B", pattern: "🟣" },
+  { name: "Kanga", color: "#1D3557", pattern: "🔵" },
+];
+
+const tailors = [
+  { name: "Amaka Osei", city: "Lagos", specialty: "Women's Wear", rating: 4.9, orders: 312, price: "₦8,000–₦25,000", initials: "AO", color: "#E85D04" },
+  { name: "Kwame Asante", city: "Accra", specialty: "Men's Wear", rating: 4.8, orders: 278, price: "₦6,000–₦20,000", initials: "KA", color: "#2D6A4F" },
+  { name: "Fatima Diallo", city: "Abuja", specialty: "Bridal", rating: 5.0, orders: 189, price: "₦15,000–₦60,000", initials: "FD", color: "#7B2D8B" },
+  { name: "Chidi Nwosu", city: "Port Harcourt", specialty: "All Styles", rating: 4.7, orders: 445, price: "₦5,000–₦18,000", initials: "CN", color: "#F4A522" },
+];
+
+const orderSteps = [
+  { label: "Order Placed", done: true, time: "Jan 12, 9:00 AM" },
+  { label: "Tailor Accepted", done: true, time: "Jan 12, 11:30 AM" },
+  { label: "In Progress", done: true, time: "Jan 13, 2:00 PM" },
+  { label: "Ready for Pickup", done: false, time: "" },
+  { label: "Out for Delivery", done: false, time: "" },
+  { label: "Delivered", done: false, time: "" },
+];
+
+// ── Shared UI ──────────────────────────────────────────────────────────────
+
+function Navbar({ screen, setScreen }) {
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      background: "rgba(253,246,236,0.96)", backdropFilter: "blur(12px)",
+      borderBottom: `1px solid ${colors.border}`,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 32px", height: 60,
+    }}>
+      <div
+        onClick={() => setScreen("landing")}
+        style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
+      >
+        <div style={{
+          width: 32, height: 32, borderRadius: 8,
+          background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 16,
+        }}>🧵</div>
+        <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 18, fontWeight: 700, color: colors.dark }}>
+          AfriWear<span style={{ color: colors.orange }}> Studio</span>
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 6 }}>
+        {[
+          { label: "Design", screen: "studio" },
+          { label: "Tailors", screen: "tailors" },
+          { label: "Track", screen: "order" },
+          { label: "Dashboard", screen: "dashboard" },
+        ].map(item => (
+          <button key={item.screen} onClick={() => setScreen(item.screen)} style={{
+            padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+            fontSize: 13, fontWeight: 500,
+            background: screen === item.screen ? colors.orange : "transparent",
+            color: screen === item.screen ? "#fff" : colors.muted,
+            transition: "all 0.2s",
+          }}>{item.label}</button>
+        ))}
+        <button onClick={() => setScreen("auth")} style={{
+          padding: "6px 18px", borderRadius: 20, border: `1.5px solid ${colors.orange}`,
+          background: "transparent", color: colors.orange, cursor: "pointer",
+          fontSize: 13, fontWeight: 600,
+        }}>Login</button>
+      </div>
+    </nav>
+  );
+}
+
+function Tag({ children, color = colors.orange }) {
+  return (
+    <span style={{
+      background: color + "18", color, border: `1px solid ${color}40`,
+      borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 600,
+    }}>{children}</span>
+  );
+}
+
+function Stars({ rating }) {
+  return (
+    <span style={{ color: colors.gold, fontSize: 13 }}>
+      {"★".repeat(Math.floor(rating))}
+      <span style={{ color: colors.border }}>{"★".repeat(5 - Math.floor(rating))}</span>
+      <span style={{ color: colors.muted, marginLeft: 4, fontSize: 12 }}>{rating}</span>
+    </span>
+  );
+}
+
+// ── SCREEN: Landing ────────────────────────────────────────────────────────
+
+function LandingScreen({ setScreen }) {
+  const patterns = ["◆", "✦", "◈", "⬡", "◉"];
+  return (
+    <div style={{ fontFamily: "Georgia, serif" }}>
+      {/* Hero */}
+      <section style={{
+        minHeight: "100vh", background: `linear-gradient(135deg, #1A0A04 0%, #3D1A0A 50%, #6B3A2A 100%)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        position: "relative", overflow: "hidden", padding: "80px 32px 60px",
+      }}>
+        {/* Decorative pattern */}
+        {[...Array(20)].map((_, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
+            color: colors.gold, opacity: 0.08, fontSize: `${20 + Math.random() * 40}px`,
+            transform: `rotate(${Math.random() * 360}deg)`,
+            pointerEvents: "none",
+          }}>{patterns[i % patterns.length]}</div>
+        ))}
+
+        <div style={{ textAlign: "center", maxWidth: 720, position: "relative", zIndex: 1 }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: colors.gold + "20", border: `1px solid ${colors.gold}40`,
+            borderRadius: 20, padding: "6px 16px", marginBottom: 28,
+          }}>
+            <span style={{ fontSize: 14 }}>✨</span>
+            <span style={{ color: colors.gold, fontSize: 13, fontWeight: 500, fontFamily: "Inter, sans-serif" }}>
+              Africa's Premier Custom Fashion Platform
+            </span>
+          </div>
+
+          <h1 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: "clamp(42px, 7vw, 80px)", fontWeight: 800,
+            color: "#fff", lineHeight: 1.1, marginBottom: 20,
+          }}>
+            Wear Your Culture,<br />
+            <span style={{ color: colors.gold }}>Your Way.</span>
+          </h1>
+
+          <p style={{
+            color: "#C9A98A", fontSize: 18, lineHeight: 1.7, marginBottom: 40,
+            fontFamily: "Inter, sans-serif", fontWeight: 300,
+          }}>
+            Design custom African wear with AI, connect with expert tailors,
+            and get it delivered to your door.
+          </p>
+
+          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={() => setScreen("studio")} style={{
+              background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+              border: "none", borderRadius: 50, padding: "16px 36px",
+              color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer",
+              boxShadow: `0 8px 32px ${colors.orange}60`,
+              fontFamily: "Inter, sans-serif",
+            }}>
+              🎨 Start Designing
+            </button>
+            <button onClick={() => setScreen("tailors")} style={{
+              background: "transparent",
+              border: "2px solid rgba(255,255,255,0.3)", borderRadius: 50,
+              padding: "16px 36px", color: "#fff", fontSize: 16,
+              fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif",
+            }}>
+              Browse Tailors →
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div style={{
+            display: "flex", gap: 40, justifyContent: "center", marginTop: 60,
+            flexWrap: "wrap",
+          }}>
+            {[["2,400+", "Happy Clients"], ["380+", "Expert Tailors"], ["15", "Countries"], ["4.9★", "Average Rating"]].map(([val, label]) => (
+              <div key={label} style={{ textAlign: "center" }}>
+                <div style={{ color: colors.gold, fontSize: 28, fontWeight: 800 }}>{val}</div>
+                <div style={{ color: "#C9A98A", fontSize: 13, fontFamily: "Inter, sans-serif" }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section style={{ background: colors.cream, padding: "80px 32px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 36, fontWeight: 700, color: colors.dark,
+            textAlign: "center", marginBottom: 8,
+          }}>How It Works</h2>
+          <p style={{ textAlign: "center", color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 56 }}>
+            From design to delivery in 4 simple steps
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+            {[
+              { icon: "🎨", step: "01", title: "Design", desc: "Upload your design or use AI to generate a custom outfit" },
+              { icon: "📏", step: "02", title: "Measure", desc: "Enter your measurements for a perfect fit every time" },
+              { icon: "🧵", step: "03", title: "Match", desc: "Get matched with a skilled tailor near you" },
+              { icon: "🚚", step: "04", title: "Deliver", desc: "Your custom outfit delivered straight to your door" },
+            ].map(item => (
+              <div key={item.step} style={{
+                background: "#fff", borderRadius: 16, padding: "28px 20px",
+                border: `1px solid ${colors.border}`, textAlign: "center",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
+              }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
+                <div style={{ color: colors.orange, fontSize: 11, fontWeight: 700, fontFamily: "Inter, sans-serif", marginBottom: 6 }}>STEP {item.step}</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: colors.dark, marginBottom: 8 }}>{item.title}</div>
+                <div style={{ color: colors.muted, fontSize: 13, lineHeight: 1.6, fontFamily: "Inter, sans-serif" }}>{item.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Fabric Section */}
+      <section style={{ background: "#fff", padding: "80px 32px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 36, fontWeight: 700, color: colors.dark,
+            textAlign: "center", marginBottom: 48,
+          }}>Premium African Fabrics</h2>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
+            {fabrics.map(f => (
+              <div key={f.name} style={{
+                background: f.color + "12", border: `2px solid ${f.color}30`,
+                borderRadius: 16, padding: "24px 28px", textAlign: "center",
+                cursor: "pointer", transition: "transform 0.2s",
+              }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>{f.pattern}</div>
+                <div style={{ color: f.color, fontWeight: 700, fontFamily: "Inter, sans-serif" }}>{f.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Tailors */}
+      <section style={{ background: colors.cream, padding: "80px 32px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 36, fontWeight: 700, color: colors.dark,
+            textAlign: "center", marginBottom: 8,
+          }}>Top Rated Tailors</h2>
+          <p style={{ textAlign: "center", color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 48 }}>
+            Handpicked artisans across Africa
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 20 }}>
+            {tailors.slice(0, 2).map(t => (
+              <div key={t.name} style={{
+                background: "#fff", borderRadius: 16, padding: 24,
+                border: `1px solid ${colors.border}`, display: "flex", gap: 16,
+                alignItems: "center",
+              }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${t.color}, ${t.color}99)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontWeight: 700, fontSize: 18, flexShrink: 0,
+                  fontFamily: "Inter, sans-serif",
+                }}>{t.initials}</div>
+                <div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark }}>{t.name}</div>
+                  <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 4 }}>{t.city} · {t.specialty}</div>
+                  <Stars rating={t.rating} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 32 }}>
+            <button onClick={() => setScreen("tailors")} style={{
+              background: colors.orange, border: "none", borderRadius: 50,
+              padding: "12px 32px", color: "#fff", fontSize: 14,
+              fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif",
+            }}>View All Tailors →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{
+        background: "#1A0A04", padding: "48px 32px 32px",
+        textAlign: "center",
+      }}>
+        <div style={{
+          fontFamily: "'Playfair Display', serif", fontSize: 24,
+          fontWeight: 700, color: "#fff", marginBottom: 8,
+        }}>AfriWear <span style={{ color: colors.gold }}>Studio</span></div>
+        <p style={{ color: "#C9A98A", fontFamily: "Inter, sans-serif", fontSize: 13, marginBottom: 24 }}>
+          Celebrating African fashion, one stitch at a time.
+        </p>
+        <div style={{ color: "#6B4A3A", fontSize: 12, fontFamily: "Inter, sans-serif" }}>
+          © 2025 AfriWear Studio · All rights reserved
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ── SCREEN: Auth ───────────────────────────────────────────────────────────
+
+function AuthScreen({ setScreen }) {
+  const [tab, setTab] = useState("login");
+  const [role, setRole] = useState("client");
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: `linear-gradient(135deg, #1A0A04, #3D1A0A)`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "80px 16px",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: 40,
+        width: "100%", maxWidth: 420, boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
+      }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>🧵</div>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: colors.dark, margin: 0 }}>
+            AfriWear Studio
+          </h2>
+        </div>
+
+        {/* Tab */}
+        <div style={{
+          display: "flex", background: colors.cream, borderRadius: 12, padding: 4, marginBottom: 24,
+        }}>
+          {["login", "signup"].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{
+              flex: 1, padding: "10px", borderRadius: 10, border: "none",
+              background: tab === t ? "#fff" : "transparent",
+              color: tab === t ? colors.orange : colors.muted,
+              fontWeight: 600, cursor: "pointer", fontSize: 14,
+              boxShadow: tab === t ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+              fontFamily: "Inter, sans-serif",
+              transition: "all 0.2s",
+            }}>{t === "login" ? "Login" : "Sign Up"}</button>
+          ))}
+        </div>
+
+        {tab === "signup" && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {["client", "tailor"].map(r => (
+              <button key={r} onClick={() => setRole(r)} style={{
+                flex: 1, padding: "10px", borderRadius: 10,
+                border: `2px solid ${role === r ? colors.orange : colors.border}`,
+                background: role === r ? colors.orange + "10" : "#fff",
+                color: role === r ? colors.orange : colors.muted,
+                fontWeight: 600, cursor: "pointer", fontSize: 13,
+                fontFamily: "Inter, sans-serif",
+              }}>
+                {r === "client" ? "👗 I'm a Client" : "🧵 I'm a Tailor"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {tab === "signup" && (
+            <input placeholder="Full Name" style={inputStyle} />
+          )}
+          <input placeholder="Email address" type="email" style={inputStyle} />
+          <input placeholder="Password" type="password" style={inputStyle} />
+          {tab === "signup" && role === "tailor" && (
+            <input placeholder="City / Location" style={inputStyle} />
+          )}
+        </div>
+
+        {tab === "login" && (
+          <div style={{ textAlign: "right", marginTop: 8 }}>
+            <span style={{ color: colors.orange, fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+              Forgot password?
+            </span>
+          </div>
+        )}
+
+        <button onClick={() => setScreen("studio")} style={{
+          width: "100%", marginTop: 20, padding: "14px",
+          background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+          border: "none", borderRadius: 12, color: "#fff",
+          fontSize: 16, fontWeight: 700, cursor: "pointer",
+          fontFamily: "Inter, sans-serif",
+          boxShadow: `0 4px 20px ${colors.orange}40`,
+        }}>
+          {tab === "login" ? "Login →" : "Create Account →"}
+        </button>
+
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12, margin: "20px 0",
+        }}>
+          <div style={{ flex: 1, height: 1, background: colors.border }} />
+          <span style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>or continue with</span>
+          <div style={{ flex: 1, height: 1, background: colors.border }} />
+        </div>
+
+        <button style={{
+          width: "100%", padding: "12px", border: `1.5px solid ${colors.border}`,
+          borderRadius: 12, background: "#fff", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          fontSize: 14, fontFamily: "Inter, sans-serif", color: colors.dark,
+        }}>
+          <span>🌐</span> Continue with Google
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%", padding: "12px 16px", borderRadius: 12,
+  border: `1.5px solid ${colors.border}`, fontSize: 14,
+  fontFamily: "Inter, sans-serif", color: colors.dark,
+  outline: "none", boxSizing: "border-box",
+  background: colors.light,
+};
+
+// ── SCREEN: Design Studio ─────────────────────────────────────────────────
+
+function StudioScreen({ setScreen }) {
+  const [selectedFabric, setSelectedFabric] = useState(0);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(false);
+  const [tab, setTab] = useState("upload");
+
+  const handleGenerate = () => {
+    if (!aiPrompt) return;
+    setGenerating(true);
+    setTimeout(() => { setGenerating(false); setGenerated(true); }, 2000);
+  };
+
+  const styles = ["Gown", "Agbada", "Senator", "Jumpsuit", "Kaftan", "Boubou", "Iro & Buba"];
+
+  return (
+    <div style={{ minHeight: "100vh", background: colors.cream, paddingTop: 80 }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: colors.dark, marginBottom: 4 }}>
+          🎨 Design Studio
+        </h1>
+        <p style={{ color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 32 }}>
+          Create your perfect African outfit
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24 }}>
+          {/* Left: Canvas */}
+          <div style={{ background: "#fff", borderRadius: 20, padding: 28, border: `1px solid ${colors.border}` }}>
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.cream, borderRadius: 12, padding: 4 }}>
+              {["upload", "ai"].map(t => (
+                <button key={t} onClick={() => setTab(t)} style={{
+                  flex: 1, padding: "10px", borderRadius: 10, border: "none",
+                  background: tab === t ? "#fff" : "transparent",
+                  color: tab === t ? colors.orange : colors.muted,
+                  fontWeight: 600, cursor: "pointer", fontSize: 14,
+                  fontFamily: "Inter, sans-serif",
+                  boxShadow: tab === t ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                }}>{t === "upload" ? "📁 Upload Design" : "✨ AI Generate"}</button>
+              ))}
+            </div>
+
+            {tab === "upload" ? (
+              <div style={{
+                border: `2px dashed ${colors.border}`, borderRadius: 16,
+                padding: "60px 20px", textAlign: "center", cursor: "pointer",
+                background: colors.light,
+              }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🖼️</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: colors.dark, marginBottom: 6 }}>
+                  Drop your design here
+                </div>
+                <div style={{ color: colors.muted, fontSize: 13 }}>
+                  JPG, PNG, PDF accepted
+                </div>
+                <button style={{
+                  marginTop: 20, padding: "10px 24px",
+                  background: colors.orange, border: "none", borderRadius: 20,
+                  color: "#fff", fontWeight: 600, cursor: "pointer",
+                  fontFamily: "Inter, sans-serif",
+                }}>Browse Files</button>
+              </div>
+            ) : (
+              <div>
+                <textarea
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="Describe your outfit... e.g. 'Ankara off-shoulder gown with gold trim and flutter sleeves'"
+                  style={{
+                    width: "100%", minHeight: 100, padding: "14px 16px",
+                    borderRadius: 12, border: `1.5px solid ${colors.border}`,
+                    fontFamily: "Inter, sans-serif", fontSize: 14, color: colors.dark,
+                    resize: "vertical", outline: "none", boxSizing: "border-box",
+                    background: colors.light,
+                  }}
+                />
+                {/* Style chips */}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0" }}>
+                  {styles.map(s => (
+                    <span key={s} onClick={() => setAiPrompt(p => p + (p ? ", " : "") + s)} style={{
+                      background: colors.cream, border: `1px solid ${colors.border}`,
+                      borderRadius: 20, padding: "4px 12px", fontSize: 12,
+                      cursor: "pointer", color: colors.muted,
+                      fontFamily: "Inter, sans-serif",
+                    }}>{s}</span>
+                  ))}
+                </div>
+
+                <button onClick={handleGenerate} disabled={!aiPrompt} style={{
+                  width: "100%", padding: "14px",
+                  background: aiPrompt ? `linear-gradient(135deg, ${colors.orange}, ${colors.gold})` : colors.border,
+                  border: "none", borderRadius: 12, color: "#fff",
+                  fontWeight: 700, cursor: aiPrompt ? "pointer" : "not-allowed",
+                  fontFamily: "Inter, sans-serif", fontSize: 15,
+                }}>
+                  {generating ? "✨ Generating..." : "✨ Generate Design"}
+                </button>
+
+                {generated && (
+                  <div style={{
+                    marginTop: 20, borderRadius: 16, overflow: "hidden",
+                    border: `2px solid ${colors.gold}`,
+                    background: `linear-gradient(135deg, ${colors.orange}20, ${colors.gold}20)`,
+                    padding: 24, textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: 64, marginBottom: 8 }}>👗</div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: colors.dark, marginBottom: 4 }}>
+                      AI Design Generated!
+                    </div>
+                    <Tag>Ankara Off-Shoulder Gown</Tag>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Order Details */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Fabric */}
+            <div style={{ background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark, marginBottom: 16 }}>
+                Select Fabric
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                {fabrics.map((f, i) => (
+                  <div key={f.name} onClick={() => setSelectedFabric(i)} style={{
+                    border: `2px solid ${selectedFabric === i ? f.color : colors.border}`,
+                    borderRadius: 12, padding: "12px 8px", textAlign: "center",
+                    cursor: "pointer", background: selectedFabric === i ? f.color + "10" : "#fff",
+                  }}>
+                    <div style={{ fontSize: 20 }}>{f.pattern}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: selectedFabric === i ? f.color : colors.muted, fontFamily: "Inter, sans-serif" }}>
+                      {f.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Details */}
+            <div style={{ background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark, marginBottom: 16 }}>
+                Order Details
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: colors.muted, fontFamily: "Inter, sans-serif" }}>QUANTITY</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {[1, 2, 3, 4].map(n => (
+                      <div key={n} style={{
+                        width: 36, height: 36, borderRadius: 8,
+                        border: `1.5px solid ${n === 1 ? colors.orange : colors.border}`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", fontFamily: "Inter, sans-serif",
+                        fontWeight: 600, color: n === 1 ? colors.orange : colors.muted,
+                        background: n === 1 ? colors.orange + "10" : "#fff",
+                        fontSize: 14,
+                      }}>{n}</div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: colors.muted, fontFamily: "Inter, sans-serif" }}>SPECIAL NOTES</label>
+                  <textarea placeholder="Any special instructions..." style={{
+                    ...inputStyle, marginTop: 6, minHeight: 60, resize: "none",
+                  }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Price estimate */}
+            <div style={{
+              background: `linear-gradient(135deg, ${colors.orange}15, ${colors.gold}10)`,
+              borderRadius: 16, padding: 16, border: `1px solid ${colors.gold}30`,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "Inter, sans-serif", color: colors.muted, fontSize: 13 }}>Estimated Price</span>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 20, color: colors.orange }}>
+                  ₦12,000–₦25,000
+                </span>
+              </div>
+            </div>
+
+            <button onClick={() => setScreen("measurements")} style={{
+              padding: "16px", background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+              border: "none", borderRadius: 14, color: "#fff",
+              fontWeight: 700, cursor: "pointer", fontSize: 15,
+              fontFamily: "Inter, sans-serif",
+              boxShadow: `0 4px 20px ${colors.orange}40`,
+            }}>
+              Next: Add Measurements →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SCREEN: Measurements ──────────────────────────────────────────────────
+
+function MeasurementsScreen({ setScreen }) {
+  const fields = [
+    { label: "Bust / Chest", icon: "📐", unit: "cm" },
+    { label: "Waist", icon: "📏", unit: "cm" },
+    { label: "Hips", icon: "📐", unit: "cm" },
+    { label: "Shoulder Width", icon: "↔️", unit: "cm" },
+    { label: "Sleeve Length", icon: "📏", unit: "cm" },
+    { label: "Dress Length", icon: "📐", unit: "cm" },
+    { label: "Trouser Length", icon: "📏", unit: "cm" },
+    { label: "Neck Size", icon: "⭕", unit: "cm" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: colors.cream, paddingTop: 80 }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: colors.dark, marginBottom: 4 }}>
+          📏 Your Measurements
+        </h1>
+        <p style={{ color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 32 }}>
+          For a perfect fit. All measurements in centimeters.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 24 }}>
+          {/* Measurements form */}
+          <div style={{ background: "#fff", borderRadius: 20, padding: 32, border: `1px solid ${colors.border}` }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {fields.map(f => (
+                <div key={f.label}>
+                  <label style={{
+                    fontSize: 12, fontWeight: 600, color: colors.muted,
+                    fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", gap: 4, marginBottom: 6,
+                  }}>
+                    <span>{f.icon}</span> {f.label.toUpperCase()}
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      style={{ ...inputStyle, paddingRight: 40 }}
+                    />
+                    <span style={{
+                      position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
+                      color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif",
+                    }}>{f.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <label style={{
+              display: "flex", alignItems: "center", gap: 10, marginTop: 24,
+              cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: 14, color: colors.dark,
+            }}>
+              <input type="checkbox" style={{ accentColor: colors.orange, width: 16, height: 16 }} />
+              Save measurements to my profile
+            </label>
+
+            <button onClick={() => setScreen("tailors")} style={{
+              width: "100%", marginTop: 24, padding: "16px",
+              background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+              border: "none", borderRadius: 14, color: "#fff",
+              fontWeight: 700, cursor: "pointer", fontSize: 15,
+              fontFamily: "Inter, sans-serif",
+              boxShadow: `0 4px 20px ${colors.orange}40`,
+            }}>
+              Find Me a Tailor →
+            </button>
+          </div>
+
+          {/* Guide */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{
+              background: `linear-gradient(135deg, #1A0A04, #3D1A0A)`,
+              borderRadius: 20, padding: 28, textAlign: "center",
+            }}>
+              <div style={{ fontSize: 80, marginBottom: 8 }}>🧍</div>
+              <div style={{ color: colors.gold, fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+                Measurement Guide
+              </div>
+              {["Bust: fullest part of chest", "Waist: narrowest point", "Hips: fullest part", "Shoulder: tip to tip"].map(tip => (
+                <div key={tip} style={{
+                  color: "#C9A98A", fontSize: 12, fontFamily: "Inter, sans-serif",
+                  marginBottom: 6, textAlign: "left",
+                }}>
+                  ✓ {tip}
+                </div>
+              ))}
+            </div>
+
+            <div style={{
+              background: colors.gold + "15", border: `1px solid ${colors.gold}40`,
+              borderRadius: 16, padding: 20,
+            }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: colors.brown, marginBottom: 8 }}>
+                💡 Pro Tip
+              </div>
+              <div style={{ color: colors.muted, fontSize: 13, fontFamily: "Inter, sans-serif", lineHeight: 1.6 }}>
+                Measure over light clothing for the most accurate fit. Ask someone to help with back measurements.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SCREEN: Tailors ───────────────────────────────────────────────────────
+
+function TailorsScreen({ setScreen }) {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <div style={{ minHeight: "100vh", background: colors.cream, paddingTop: 80 }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: colors.dark, marginBottom: 4 }}>
+          🧵 Find a Tailor
+        </h1>
+        <p style={{ color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 32 }}>
+          Matched to your design and location
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 24 }}>
+          {/* Filter Sidebar */}
+          <div style={{ background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${colors.border}`, height: "fit-content" }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark, marginBottom: 20 }}>
+              Filters
+            </div>
+
+            {[
+              { label: "LOCATION", options: ["Lagos", "Accra", "Abuja", "Nairobi"] },
+              { label: "SPECIALTY", options: ["Women's Wear", "Men's Wear", "Bridal", "Children's"] },
+            ].map(group => (
+              <div key={group.label} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 10 }}>
+                  {group.label}
+                </div>
+                {group.options.map(opt => (
+                  <label key={opt} style={{
+                    display: "flex", alignItems: "center", gap: 8, marginBottom: 8,
+                    cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: 13, color: colors.dark,
+                  }}>
+                    <input type="checkbox" style={{ accentColor: colors.orange }} />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ))}
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 10 }}>
+                MINIMUM RATING
+              </div>
+              {["⭐ 4.5+", "⭐ 4.0+", "⭐ Any"].map(r => (
+                <label key={r} style={{
+                  display: "flex", alignItems: "center", gap: 8, marginBottom: 8,
+                  cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: 13, color: colors.dark,
+                }}>
+                  <input type="radio" name="rating" style={{ accentColor: colors.orange }} />
+                  {r}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Tailor Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+            {tailors.map((t, i) => (
+              <div key={t.name} style={{
+                background: "#fff", borderRadius: 20, padding: 24,
+                border: `2px solid ${selected === i ? colors.orange : colors.border}`,
+                cursor: "pointer", transition: "all 0.2s",
+                boxShadow: selected === i ? `0 4px 24px ${colors.orange}30` : "0 2px 8px rgba(0,0,0,0.04)",
+              }} onClick={() => setSelected(i)}>
+                <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 16 }}>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: "50%",
+                    background: `linear-gradient(135deg, ${t.color}, ${t.color}99)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontWeight: 700, fontSize: 18, flexShrink: 0,
+                    fontFamily: "Inter, sans-serif",
+                  }}>{t.initials}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark }}>
+                      {t.name}
+                    </div>
+                    <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif", marginBottom: 4 }}>
+                      📍 {t.city}
+                    </div>
+                    <Tag color={t.color}>{t.specialty}</Tag>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <Stars rating={t.rating} />
+                  <span style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>
+                    {t.orders} orders
+                  </span>
+                </div>
+
+                {/* Portfolio thumbnails */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} style={{
+                      flex: 1, height: 56, borderRadius: 10,
+                      background: `linear-gradient(135deg, ${t.color}30, ${t.color}10)`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 20,
+                    }}>👗</div>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: colors.muted }}>{t.price}</span>
+                  <button onClick={() => setScreen("payment")} style={{
+                    padding: "8px 18px", background: selected === i ? colors.orange : colors.cream,
+                    border: `1.5px solid ${selected === i ? colors.orange : colors.border}`,
+                    borderRadius: 20, color: selected === i ? "#fff" : colors.dark,
+                    fontWeight: 600, cursor: "pointer", fontSize: 12,
+                    fontFamily: "Inter, sans-serif",
+                  }}>
+                    {selected === i ? "✓ Selected" : "Select"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {selected !== null && (
+          <div style={{ textAlign: "center", marginTop: 32 }}>
+            <button onClick={() => setScreen("payment")} style={{
+              padding: "16px 48px",
+              background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+              border: "none", borderRadius: 50, color: "#fff",
+              fontWeight: 700, cursor: "pointer", fontSize: 16,
+              fontFamily: "Inter, sans-serif",
+              boxShadow: `0 8px 32px ${colors.orange}40`,
+            }}>
+              Proceed to Payment →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── SCREEN: Order Tracking ─────────────────────────────────────────────────
+
+function OrderScreen() {
+  return (
+    <div style={{ minHeight: "100vh", background: colors.cream, paddingTop: 80 }}>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px" }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: colors.dark, marginBottom: 4 }}>
+          📦 Track Your Order
+        </h1>
+        <p style={{ color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 32 }}>
+          Order #AFW-2025-0892
+        </p>
+
+        {/* Order Card */}
+        <div style={{
+          background: "#fff", borderRadius: 20, padding: 24,
+          border: `1px solid ${colors.border}`, marginBottom: 20,
+          display: "flex", gap: 20, alignItems: "center",
+        }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: 16,
+            background: `linear-gradient(135deg, ${colors.orange}30, ${colors.gold}20)`,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, flexShrink: 0,
+          }}>👗</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 18, color: colors.dark, marginBottom: 4 }}>
+              Ankara Off-Shoulder Gown
+            </div>
+            <div style={{ color: colors.muted, fontSize: 13, fontFamily: "Inter, sans-serif", marginBottom: 8 }}>
+              Tailor: Amaka Osei · Lagos · Ankara Fabric
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Tag>In Progress</Tag>
+              <Tag color={colors.success}>Est. Jan 20</Tag>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 22, color: colors.orange }}>
+              ₦18,500
+            </div>
+            <div style={{ color: colors.success, fontSize: 12, fontFamily: "Inter, sans-serif" }}>✓ Paid</div>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div style={{
+          background: "#fff", borderRadius: 20, padding: 32,
+          border: `1px solid ${colors.border}`, marginBottom: 20,
+        }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 18, color: colors.dark, marginBottom: 24 }}>
+            Order Status
+          </div>
+          {orderSteps.map((step, i) => (
+            <div key={step.label} style={{ display: "flex", gap: 16, marginBottom: i < orderSteps.length - 1 ? 0 : 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%",
+                  background: step.done ? colors.orange : colors.border,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: step.done ? "#fff" : colors.muted, fontSize: 14, fontWeight: 700,
+                  flexShrink: 0, zIndex: 1,
+                }}>
+                  {step.done ? "✓" : i + 1}
+                </div>
+                {i < orderSteps.length - 1 && (
+                  <div style={{
+                    width: 2, flex: 1, minHeight: 32,
+                    background: step.done ? colors.orange : colors.border,
+                    margin: "4px 0",
+                  }} />
+                )}
+              </div>
+              <div style={{ paddingBottom: i < orderSteps.length - 1 ? 24 : 0 }}>
+                <div style={{
+                  fontFamily: "Inter, sans-serif", fontWeight: step.done ? 700 : 500,
+                  color: step.done ? colors.dark : colors.muted, fontSize: 15,
+                }}>{step.label}</div>
+                {step.time && (
+                  <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif", marginTop: 2 }}>
+                    {step.time}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Chat */}
+        <div style={{
+          background: "#fff", borderRadius: 20, padding: 24,
+          border: `1px solid ${colors.border}`,
+        }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark, marginBottom: 16 }}>
+            💬 Chat with Tailor
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+            {[
+              { from: "Amaka Osei", msg: "Hi! I've received your order and started on the fabric cutting.", time: "10:30 AM", mine: false },
+              { from: "You", msg: "Great! Please make the sleeves a bit longer if possible.", time: "10:45 AM", mine: true },
+              { from: "Amaka Osei", msg: "Noted! I'll adjust the sleeve length. Progress photos coming soon 📸", time: "11:00 AM", mine: false },
+            ].map((m, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: m.mine ? "flex-end" : "flex-start" }}>
+                <div style={{
+                  maxWidth: "70%", background: m.mine ? colors.orange : colors.cream,
+                  borderRadius: m.mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                  padding: "10px 14px",
+                }}>
+                  {!m.mine && (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: colors.orange, fontFamily: "Inter, sans-serif", marginBottom: 4 }}>
+                      {m.from}
+                    </div>
+                  )}
+                  <div style={{ color: m.mine ? "#fff" : colors.dark, fontSize: 13, fontFamily: "Inter, sans-serif" }}>
+                    {m.msg}
+                  </div>
+                  <div style={{ fontSize: 10, color: m.mine ? "rgba(255,255,255,0.7)" : colors.muted, fontFamily: "Inter, sans-serif", marginTop: 4, textAlign: "right" }}>
+                    {m.time}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <input placeholder="Type a message..." style={{ ...inputStyle, flex: 1 }} />
+            <button style={{
+              padding: "10px 20px", background: colors.orange,
+              border: "none", borderRadius: 12, color: "#fff",
+              fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif",
+            }}>Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SCREEN: Payment ───────────────────────────────────────────────────────
+
+function PaymentScreen({ setScreen }) {
+  const [method, setMethod] = useState("card");
+  const [paid, setPaid] = useState(false);
+
+  if (paid) return (
+    <div style={{
+      minHeight: "100vh", background: colors.cream, paddingTop: 80,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: 48, textAlign: "center",
+        maxWidth: 400, border: `1px solid ${colors.border}`,
+        boxShadow: "0 8px 40px rgba(0,0,0,0.08)",
+      }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, color: colors.dark, marginBottom: 8 }}>
+          Payment Successful!
+        </h2>
+        <p style={{ color: colors.muted, fontFamily: "Inter, sans-serif", marginBottom: 24 }}>
+          Your order has been placed. Amaka Osei will start working on your Ankara gown.
+        </p>
+        <Tag color={colors.success}>Order #AFW-2025-0892</Tag>
+        <button onClick={() => setScreen("order")} style={{
+          width: "100%", marginTop: 24, padding: "14px",
+          background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+          border: "none", borderRadius: 12, color: "#fff",
+          fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif",
+        }}>
+          Track My Order →
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: colors.cream, paddingTop: 80 }}>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px" }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: colors.dark, marginBottom: 32 }}>
+          💳 Payment
+        </h1>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
+          {/* Payment Form */}
+          <div style={{ background: "#fff", borderRadius: 20, padding: 28, border: `1px solid ${colors.border}` }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark, marginBottom: 20 }}>
+              Payment Method
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+              {[
+                { id: "card", icon: "💳", label: "Card Payment" },
+                { id: "mobile", icon: "📱", label: "Mobile Money" },
+                { id: "bank", icon: "🏦", label: "Bank Transfer" },
+              ].map(m => (
+                <div key={m.id} onClick={() => setMethod(m.id)} style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: "14px 18px",
+                  borderRadius: 14, border: `2px solid ${method === m.id ? colors.orange : colors.border}`,
+                  cursor: "pointer", background: method === m.id ? colors.orange + "08" : "#fff",
+                }}>
+                  <span style={{ fontSize: 20 }}>{m.icon}</span>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, color: method === m.id ? colors.orange : colors.dark }}>
+                    {m.label}
+                  </span>
+                  <div style={{
+                    marginLeft: "auto", width: 18, height: 18, borderRadius: "50%",
+                    border: `2px solid ${method === m.id ? colors.orange : colors.border}`,
+                    background: method === m.id ? colors.orange : "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {method === m.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {method === "card" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <input placeholder="Card Number" style={inputStyle} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <input placeholder="MM / YY" style={inputStyle} />
+                  <input placeholder="CVV" style={inputStyle} />
+                </div>
+                <input placeholder="Cardholder Name" style={inputStyle} />
+              </div>
+            )}
+
+            {method === "mobile" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <input placeholder="Mobile Number" style={inputStyle} />
+                <select style={inputStyle}>
+                  <option>MTN Mobile Money</option>
+                  <option>Airtel Money</option>
+                  <option>M-Pesa</option>
+                </select>
+              </div>
+            )}
+
+            {method === "bank" && (
+              <div style={{
+                background: colors.cream, borderRadius: 14, padding: 20,
+                fontFamily: "Inter, sans-serif", fontSize: 13, color: colors.dark,
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>Transfer Details</div>
+                {[["Bank", "GTBank"], ["Account No", "0123456789"], ["Account Name", "AfriWear Studio Ltd"], ["Amount", "₦18,500"]].map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottom: `1px solid ${colors.border}` }}>
+                    <span style={{ color: colors.muted }}>{k}</span>
+                    <span style={{ fontWeight: 600 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 20 }}>
+              <input placeholder="Promo code" style={inputStyle} />
+            </div>
+
+            <button onClick={() => setPaid(true)} style={{
+              width: "100%", marginTop: 20, padding: "16px",
+              background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+              border: "none", borderRadius: 14, color: "#fff",
+              fontWeight: 700, cursor: "pointer", fontSize: 15,
+              fontFamily: "Inter, sans-serif",
+              boxShadow: `0 4px 20px ${colors.orange}40`,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}>
+              🔒 Pay Securely
+            </button>
+          </div>
+
+          {/* Order Summary */}
+          <div>
+            <div style={{ background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.dark, marginBottom: 20 }}>
+                Order Summary
+              </div>
+
+              <div style={{
+                background: colors.cream, borderRadius: 14, padding: 16,
+                display: "flex", gap: 12, marginBottom: 20, alignItems: "center",
+              }}>
+                <div style={{ fontSize: 32 }}>👗</div>
+                <div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 14, color: colors.dark }}>
+                    Ankara Off-Shoulder Gown
+                  </div>
+                  <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>
+                    Tailor: Amaka Osei
+                  </div>
+                </div>
+              </div>
+
+              {[
+                ["Garment", "₦15,000"],
+                ["Delivery Fee", "₦2,500"],
+                ["Service Fee", "₦1,000"],
+              ].map(([label, amount]) => (
+                <div key={label} style={{
+                  display: "flex", justifyContent: "space-between",
+                  fontFamily: "Inter, sans-serif", fontSize: 13, color: colors.muted,
+                  marginBottom: 10,
+                }}>
+                  <span>{label}</span>
+                  <span style={{ color: colors.dark }}>{amount}</span>
+                </div>
+              ))}
+
+              <div style={{ height: 1, background: colors.border, margin: "16px 0" }} />
+
+              <div style={{
+                display: "flex", justifyContent: "space-between",
+                fontFamily: "'Playfair Display', serif", fontWeight: 700,
+                fontSize: 18, color: colors.dark,
+              }}>
+                <span>Total</span>
+                <span style={{ color: colors.orange }}>₦18,500</span>
+              </div>
+
+              <div style={{
+                marginTop: 16, background: colors.success + "10",
+                border: `1px solid ${colors.success}30`, borderRadius: 10,
+                padding: "10px 14px", fontFamily: "Inter, sans-serif",
+                fontSize: 12, color: colors.success, display: "flex", gap: 6,
+              }}>
+                🔒 Your payment is secured by SSL encryption
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SCREEN: Dashboard ─────────────────────────────────────────────────────
+
+function DashboardScreen({ setScreen }) {
+  const [tab, setTab] = useState("orders");
+
+  return (
+    <div style={{ minHeight: "100vh", background: colors.cream, paddingTop: 80 }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 24px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 32 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%",
+            background: `linear-gradient(135deg, ${colors.orange}, ${colors.gold})`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontWeight: 700, fontSize: 22,
+            fontFamily: "Inter, sans-serif",
+          }}>A</div>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: colors.dark }}>
+              Welcome back, Adaeze 👋
+            </div>
+            <div style={{ color: colors.muted, fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+              Lagos, Nigeria · Member since Jan 2025
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 32 }}>
+          {[
+            { label: "Total Orders", value: "12", icon: "📦", color: colors.orange },
+            { label: "Completed", value: "9", icon: "✅", color: colors.success },
+            { label: "In Progress", value: "2", icon: "🔄", color: colors.gold },
+            { label: "Saved Designs", value: "5", icon: "🎨", color: "#7B2D8B" },
+          ].map(s => (
+            <div key={s.label} style={{
+              background: "#fff", borderRadius: 16, padding: 20,
+              border: `1px solid ${colors.border}`, textAlign: "center",
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{s.icon}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 24, color: s.color }}>
+                {s.value}
+              </div>
+              <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4, background: "#fff", borderRadius: 14, padding: 6, marginBottom: 24, border: `1px solid ${colors.border}` }}>
+          {[
+            { id: "orders", label: "📦 My Orders" },
+            { id: "designs", label: "🎨 My Designs" },
+            { id: "messages", label: "💬 Messages" },
+            { id: "payments", label: "💳 Payments" },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              flex: 1, padding: "10px", borderRadius: 10, border: "none",
+              background: tab === t.id ? colors.orange : "transparent",
+              color: tab === t.id ? "#fff" : colors.muted,
+              fontWeight: 600, cursor: "pointer", fontSize: 13,
+              fontFamily: "Inter, sans-serif",
+            }}>{t.label}</button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {tab === "orders" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { id: "#AFW-0892", item: "Ankara Off-Shoulder Gown", tailor: "Amaka Osei", status: "In Progress", statusColor: colors.gold, price: "₦18,500", emoji: "👗" },
+              { id: "#AFW-0845", item: "Men's Agbada Set", tailor: "Kwame Asante", status: "Delivered", statusColor: colors.success, price: "₦32,000", emoji: "👘" },
+              { id: "#AFW-0801", item: "Bridal Kente Gown", tailor: "Fatima Diallo", status: "Delivered", statusColor: colors.success, price: "₦65,000", emoji: "👰" },
+            ].map(order => (
+              <div key={order.id} style={{
+                background: "#fff", borderRadius: 16, padding: 20,
+                border: `1px solid ${colors.border}`,
+                display: "flex", alignItems: "center", gap: 16,
+              }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: 12,
+                  background: `${colors.orange}15`,
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0,
+                }}>{order.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, color: colors.dark, marginBottom: 2 }}>
+                    {order.item}
+                  </div>
+                  <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>
+                    {order.id} · {order.tailor}
+                  </div>
+                </div>
+                <Tag color={order.statusColor}>{order.status}</Tag>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.orange }}>
+                  {order.price}
+                </div>
+                <button onClick={() => setScreen("order")} style={{
+                  padding: "8px 16px", background: colors.cream, border: `1px solid ${colors.border}`,
+                  borderRadius: 20, cursor: "pointer", fontSize: 12, fontFamily: "Inter, sans-serif", color: colors.dark,
+                }}>Track</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "designs" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            {[
+              { name: "Ankara Gown", fabric: "Ankara", emoji: "👗", color: colors.orange },
+              { name: "Senator Set", fabric: "Aso-oke", emoji: "👔", color: colors.brown },
+              { name: "Dashiki Top", fabric: "Dashiki", emoji: "👕", color: "#7B2D8B" },
+              { name: "Kente Dress", fabric: "Kente", emoji: "👘", color: colors.gold },
+              { name: "Adire Jumpsuit", fabric: "Adire", emoji: "🧥", color: colors.success },
+              { name: "New Design +", fabric: "", emoji: "➕", color: colors.muted, isNew: true },
+            ].map((d, i) => (
+              <div key={i} onClick={() => d.isNew && setScreen("studio")} style={{
+                background: d.isNew ? colors.cream : "#fff",
+                border: `${d.isNew ? "2px dashed" : "1px solid"} ${d.isNew ? colors.border : colors.border}`,
+                borderRadius: 16, padding: 20, textAlign: "center", cursor: "pointer",
+              }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: 14, margin: "0 auto 12px",
+                  background: d.isNew ? colors.cream : d.color + "15",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
+                }}>{d.emoji}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 14, color: d.isNew ? colors.muted : colors.dark }}>
+                  {d.name}
+                </div>
+                {d.fabric && <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>{d.fabric}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "payments" && (
+          <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", border: `1px solid ${colors.border}` }}>
+            {[
+              { id: "#AFW-0892", item: "Ankara Off-Shoulder Gown", date: "Jan 12, 2025", amount: "₦18,500", status: "Paid" },
+              { id: "#AFW-0845", item: "Men's Agbada Set", date: "Dec 28, 2024", amount: "₦32,000", status: "Paid" },
+              { id: "#AFW-0801", item: "Bridal Kente Gown", date: "Nov 15, 2024", amount: "₦65,000", status: "Paid" },
+            ].map((p, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 16, padding: "16px 24px",
+                borderBottom: i < 2 ? `1px solid ${colors.border}` : "none",
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 14, color: colors.dark }}>{p.item}</div>
+                  <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>{p.id} · {p.date}</div>
+                </div>
+                <Tag color={colors.success}>{p.status}</Tag>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color: colors.orange }}>{p.amount}</div>
+                <button style={{
+                  padding: "6px 14px", border: `1px solid ${colors.border}`, borderRadius: 20,
+                  background: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "Inter, sans-serif", color: colors.muted,
+                }}>Invoice</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "messages" && (
+          <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", border: `1px solid ${colors.border}` }}>
+            {tailors.map((t, i) => (
+              <div key={i} onClick={() => setScreen("order")} style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "16px 24px",
+                borderBottom: i < tailors.length - 1 ? `1px solid ${colors.border}` : "none",
+                cursor: "pointer",
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${t.color}, ${t.color}99)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontWeight: 700, fontSize: 16, flexShrink: 0,
+                  fontFamily: "Inter, sans-serif",
+                }}>{t.initials}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 14, color: colors.dark }}>{t.name}</div>
+                  <div style={{ color: colors.muted, fontSize: 12, fontFamily: "Inter, sans-serif" }}>
+                    {i === 0 ? "Progress photos coming soon 📸" : "Thank you for your order!"}
+                  </div>
+                </div>
+                <div style={{ color: colors.muted, fontSize: 11, fontFamily: "Inter, sans-serif" }}>
+                  {i === 0 ? "11:00 AM" : "Yesterday"}
+                </div>
+                {i === 0 && (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: "50%", background: colors.orange,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: 10, fontWeight: 700, fontFamily: "Inter, sans-serif",
+                  }}>2</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── App Root ───────────────────────────────────────────────────────────────
+
+function App() {
+  const [screen, setScreen] = useState("landing");
+
+  const renderScreen = () => {
+    switch (screen) {
+      case "landing": return <LandingScreen setScreen={setScreen} />;
+      case "auth": return <AuthScreen setScreen={setScreen} />;
+      case "studio": return <StudioScreen setScreen={setScreen} />;
+      case "measurements": return <MeasurementsScreen setScreen={setScreen} />;
+      case "tailors": return <TailorsScreen setScreen={setScreen} />;
+      case "order": return <OrderScreen />;
+      case "payment": return <PaymentScreen setScreen={setScreen} />;
+      case "dashboard": return <DashboardScreen setScreen={setScreen} />;
+      default: return <LandingScreen setScreen={setScreen} />;
+    }
+  };
+
+  return (
+    <div style={{ fontFamily: "Inter, sans-serif", background: colors.cream, minHeight: "100vh" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&display=swap" rel="stylesheet" />
+      {screen !== "auth" && <Navbar screen={screen} setScreen={setScreen} />}
+      {renderScreen()}
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
